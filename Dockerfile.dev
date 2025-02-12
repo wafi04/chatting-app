@@ -1,0 +1,20 @@
+FROM golang:1.22
+
+WORKDIR /app
+
+# Install air for hot-reloading
+RUN go install github.com/cosmtrek/air@v1.44.0
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the entire project
+COPY . .
+
+EXPOSE 8080
+
+# Use air for hot-reloading
+CMD ["air"]
