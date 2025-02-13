@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/wafi04/chatting-app/services/shared/pkg/logger"
 )
 
 type Database struct {
-	DB *sqlx.DB
+	DB  *sqlx.DB
+	log logger.Logger
 }
 
 func NewDB(connStr string) (*Database, error) {
@@ -75,6 +77,6 @@ func (d *Database) Health() map[string]string {
 }
 
 func (d *Database) Close() error {
-	// d.logerr.Log(logger.InfoLevel, "Disconnected from database: %s", database)
+	d.log.Log(logger.InfoLevel, "Disconnected from database")
 	return d.DB.Close()
 }

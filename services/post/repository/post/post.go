@@ -7,24 +7,28 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	authrepository "github.com/wafi04/chatting-app/services/auth/pkg/repository"
+	"github.com/wafi04/chatting-app/services/comments"
 	"github.com/wafi04/chatting-app/services/shared/pkg/logger"
 	"github.com/wafi04/chatting-app/services/shared/types"
 	"github.com/wafi04/chatting-app/services/shared/utils"
 )
 
 type PostRepository struct {
-	DB     *sqlx.DB
-	logger logger.Logger
+	DB          *sqlx.DB
+	logger      logger.Logger
+	commentRepo *comments.CommentRepository
+	authrepo    *authrepository.AuthRepository
 }
 
-func NewPostRepository(db *sqlx.DB) *PostRepository {
+func NewPostRepository(db *sqlx.DB, commentRepo *comments.CommentRepository, authrepo *authrepository.AuthRepository) *PostRepository {
 	return &PostRepository{
-		DB: db,
+		DB:          db,
+		commentRepo: commentRepo,
+		authrepo:    authrepo,
 	}
 }
 func (r *PostRepository) CreatePost(ctx context.Context, req *types.Post) (*types.Post, error) {
-	r.logger.Log(logger.InfoLevel, "req : %s", req)
-
 	tx, err := r.DB.BeginTxx(ctx, nil)
 	if err != nil {
 		r.logger.Log(logger.ErrorLevel, "Failed to begin transaction: %v", err)
@@ -92,6 +96,7 @@ func (r *PostRepository) CreatePost(ctx context.Context, req *types.Post) (*type
 		pq.Array(&dbMentions),
 		&created_at,
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
@@ -99,21 +104,22 @@ func (r *PostRepository) CreatePost(ctx context.Context, req *types.Post) (*type
 	post.Tags = dbTags
 	post.Mentions = dbMentions
 
-	// for _, mediaUpload := range req.Media {
-	// 	mediaID := utils.GenerateRandomId("MEDIA")
-	// 	_, err := r.CreateMedia(ctx, tx, &types.Media{
-	// 		Id:       mediaID,
-	// 		FileUrl:  mediaUpload.FileUrl,
-	// 		PublicId: mediaUpload.PublicId,
-	// 		FileType: mediaUpload.FileType,
-	// 		FileName: mediaUpload.FileName,
-	// 		PostId:   post.Id,
-	// 	})
-	// 	if err != nil {
-	// 		r.logger.Log(logger.ErrorLevel, "Failed to upload media: %v", err)
-	// 		return nil, fmt.Errorf("failed to upload media: %v", err)
-	// 	}
-	// }
+	for _, mediaUpload := range req.Media {
+		mediaID := utils.GenerateRandomId("MEDIA")
+		r.logger.Log(logger.InfoLevel, "url : %s", mediaUpload.FileUrl)
+		_, err := r.CreateMedia(ctx, tx, &types.Media{
+			Id:       mediaID,
+			FileUrl:  mediaUpload.FileUrl,
+			PublicId: mediaUpload.PublicId,
+			FileType: mediaUpload.FileType,
+			FileName: mediaUpload.FileName,
+			PostId:   post.Id,
+		})
+		if err != nil {
+			r.logger.Log(logger.ErrorLevel, "Failed to upload media: %v", err)
+			return nil, fmt.Errorf("failed to upload media: %v", err)
+		}
+	}
 
 	post.CreatedAt = created_at.Unix()
 	post.Media = req.Media
@@ -181,5 +187,31 @@ func (r *PostRepository) GetAllPosts(ctx context.Context, req *types.GetAllPosts
 
 	return &types.GetAllPostsResponse{
 		Posts: posts,
+	}, nil
+}
+
+func (r *PostRepository) DeletePosts(ctx context.Context, req *types.DeletePostRequest) (*types.DeletePostResponse, error) {
+	query := `
+        DELETE FROM posts 
+        WHERE id = $1
+        RETURNING id`
+
+	result, err := r.DB.ExecContext(ctx, query, req.PostId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete post: %v", err)
+	}
+
+	// Cek apakah ada row yang terpengaruh
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return nil, fmt.Errorf("post with id %s not found", req.PostId)
+	}
+
+	return &types.DeletePostResponse{
+		Success: true,
 	}, nil
 }

@@ -158,7 +158,7 @@ func SetRefreshTokenCookie(c *gin.Context, token string) {
 		token,
 		int(168*3600),
 		"/",
-		"192.168.100.9",
+		"192.168.100.6",
 		false,
 		true,
 	)
@@ -172,7 +172,7 @@ func SetAccressTokenCookie(c *gin.Context, token string) {
 		token,
 		int(24*3600),
 		"/",
-		"192.168.100.9",
+		"192.168.100.6",
 		false,
 		true,
 	)
@@ -185,7 +185,7 @@ func SetSessionCookie(c *gin.Context, sessionID string) {
 		sessionID,
 		int(168*3600),
 		"/",
-		"192.168.100.9",
+		"192.168.100.6",
 		false,
 		true,
 	)
@@ -206,6 +206,7 @@ func ClearTokens(c *gin.Context) {
 }
 
 func ResponseTime(r *gin.Engine) {
+	log.Printf("calledd")
 	r.Use(func(c *gin.Context) {
 		start := time.Now()
 		c.Next()

@@ -5,51 +5,58 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/wafi04/chatting-app/config"
 	"github.com/wafi04/chatting-app/config/database"
-	"github.com/wafi04/chatting-app/config/env"
 	authhandler "github.com/wafi04/chatting-app/services/auth/pkg/handler"
 	authrepository "github.com/wafi04/chatting-app/services/auth/pkg/repository"
 	authservice "github.com/wafi04/chatting-app/services/auth/pkg/service"
-	posthandler "github.com/wafi04/chatting-app/services/post/pkg/handler"
-	cloudrepo "github.com/wafi04/chatting-app/services/post/pkg/repository/cloud"
-	postrepo "github.com/wafi04/chatting-app/services/post/pkg/repository/post"
-	postservice "github.com/wafi04/chatting-app/services/post/pkg/service"
+	"github.com/wafi04/chatting-app/services/comments"
+	"github.com/wafi04/chatting-app/services/likes"
+	posthandler "github.com/wafi04/chatting-app/services/post/handler"
+	cloudrepo "github.com/wafi04/chatting-app/services/post/repository/cloud"
+	postrepo "github.com/wafi04/chatting-app/services/post/repository/post"
+	postservice "github.com/wafi04/chatting-app/services/post/service"
 	"github.com/wafi04/chatting-app/services/shared/middleware"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func SetUpRoutes(db *database.Database) *gin.Engine {
+func SetUpRoutes(db *database.Database, mongoClient *mongo.Client, cld *cloudinary.Cloudinary) *gin.Engine {
 	r := gin.Default()
 	config.SetUpCors(r)
 	middleware.ResponseTime(r)
 	CheckCoon(r)
 
-	cld, err := cloudinary.NewFromParams(
-		env.LoadEnv("CLOUDINARY_CLOUD_NAME"),
-		env.LoadEnv("CLOUDINARY_API_KEY"),
-		env.LoadEnv("CLOUDINARY_API_SECRET"),
-	)
-	if err != nil {
-		panic(err)
+	// Cloudinary setup
 
-	}
+	// Auth dependencies
+	authRepo := authrepository.NewUserRepository(db.DB)
+	authService := authservice.NewAuthService(authRepo)
+	authHandler := authhandler.NewGateway(authService)
 
-	authrepo := authrepository.NewUserRepository(db.DB)
-	authservice := authservice.NewAuthService(authrepo)
-	authsrv := authhandler.NewGateway(authservice)
+	commentRepo := comments.NewCommentRepository(db.DB, authRepo)
 
-	postrepo := postrepo.NewPostRepository(db.DB)
-	cloudrepo := cloudrepo.NewCloudinaryService(cld)
-	postservice := postservice.NewPostService(cloudrepo, postrepo)
-	postsrv := posthandler.NewGateway(postservice, authservice)
+	commetService := comments.NewCommntService(commentRepo)
+	commentHandler := comments.NewCommntHandler(commetService)
+	// Post dependencies
+	postRepo := postrepo.NewPostRepository(db.DB, commentRepo, authRepo)
+	cloudRepo := cloudrepo.NewCloudinaryService(cld)
+	postService := postservice.NewPostService(cloudRepo, postRepo)
+	postHandler := posthandler.NewGateway(postService, authService)
 
+	likerepo := likes.NewLikeRepository(mongoClient)
+	likeHandler := likes.NewLikeHandler(likerepo)
+
+	// Routes
 	api := r.Group("/api/v1")
-
-	authenticated := r.Group("")
+	authenticated := api.Group("")
 	authenticated.Use(middleware.AuthMiddleware())
+
 	auth := api.Group("/auth")
-	authhandler.RegisterRoutes(auth, authsrv)
+	authhandler.RegisterRoutes(auth, authHandler)
+	post := authenticated.Group("/post")
+	posthandler.RegisterRoutes(post, postHandler)
 
-	post := api.Group("/post")
-	posthandler.RegisterRoutes(post, postsrv)
-
+	comment := authenticated.Group("/comment")
+	comments.RegisterRoutes(comment, commentHandler)
+	like := authenticated.Group("/likes")
+	likes.RegisterRoutes(like, likeHandler)
 	return r
 }

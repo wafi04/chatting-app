@@ -2,6 +2,7 @@ package authservice
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -70,11 +71,11 @@ func (s *AuthService) ResendVerification(ctx context.Context, req *types.ResendV
 
 	return user, nil
 }
-func (s *AuthService) GetUser(ctx context.Context, req *types.GetUserRequest) (*types.GetUserResponse, error) {
+func (s *AuthService) GetUser(ctx context.Context, req *types.GetUserRequest) (*types.UserInfo, error) {
 
 	user, err := s.authRepo.GetUser(ctx, req)
 	if err != nil {
-		return &types.GetUserResponse{}, err
+		return nil, fmt.Errorf("failed to get Profile : %s ", err.Error())
 	}
 
 	return user, nil

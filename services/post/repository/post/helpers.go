@@ -3,6 +3,7 @@ package postrepo
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -45,8 +46,26 @@ func (r *PostRepository) QueryPosts(ctx context.Context, query string, args ...i
 		if err != nil {
 			return nil, fmt.Errorf("failed to get media for post %s: %w", post.Id, err)
 		}
+		count, err := r.commentRepo.GetCountComment(ctx, post.Id)
+		log.Printf("count ; %d", count.Count)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to get count comment : %s : %w", post.Id, err)
+		}
+		user, err := r.authrepo.GetUser(ctx, &types.GetUserRequest{
+			UserId: post.UserId,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get count comment : %s : %w", post.Id, err)
+		}
 
 		post.Media = mediaList
+		post.CommentCount = count.Count
+		post.UserInfo = types.UserInfo{
+			UserId: user.UserId,
+			Name:   user.Name,
+			Email:  user.Email,
+		}
 
 		posts = append(posts, post)
 	}

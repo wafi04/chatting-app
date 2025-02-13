@@ -152,7 +152,6 @@ func (r *AuthRepository) Login(ctx context.Context, login *types.LoginRequest) (
 		&dbuser.LastLoginAt,
 		&dbuser.IsActive,
 	)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user not found")
@@ -258,7 +257,7 @@ func (r *AuthRepository) Login(ctx context.Context, login *types.LoginRequest) (
 	}, nil
 }
 
-func (sr *AuthRepository) GetUser(ctx context.Context, req *types.GetUserRequest) (*types.GetUserResponse, error) {
+func (sr *AuthRepository) GetUser(ctx context.Context, req *types.GetUserRequest) (*types.UserInfo, error) {
 	query := `
         SELECT 
             user_id, 
@@ -275,9 +274,7 @@ func (sr *AuthRepository) GetUser(ctx context.Context, req *types.GetUserRequest
     `
 	sr.logger.Log(logger.InfoLevel, "data")
 
-	user := &types.GetUserResponse{
-		User: &types.UserInfo{},
-	}
+	user := &types.UserInfo{}
 
 	var (
 		isActive                          bool
@@ -285,12 +282,12 @@ func (sr *AuthRepository) GetUser(ctx context.Context, req *types.GetUserRequest
 		picture                           sql.NullString
 	)
 	err := sr.DB.QueryRowContext(ctx, query, req.UserId).Scan(
-		&user.User.UserId,
-		&user.User.Name,
-		&user.User.Email,
+		&user.UserId,
+		&user.Name,
+		&user.Email,
 		&picture,
 		&isActive,
-		&user.User.IsEmailVerified,
+		&user.IsEmailVerified,
 		&createdAt,
 		&updatedAt,
 		&lastLoginAt,
@@ -301,12 +298,12 @@ func (sr *AuthRepository) GetUser(ctx context.Context, req *types.GetUserRequest
 	}
 
 	if picture.Valid {
-		user.User.Picture = picture.String
+		user.Picture = picture.String
 	}
 
-	user.User.CreatedAt = createdAt.Unix()
-	user.User.UpdatedAt = updatedAt.Unix()
-	user.User.LastLoginAt = lastLoginAt.Unix()
+	user.CreatedAt = createdAt.Unix()
+	user.UpdatedAt = updatedAt.Unix()
+	user.LastLoginAt = lastLoginAt.Unix()
 	return user, nil
 }
 

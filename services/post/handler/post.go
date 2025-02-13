@@ -3,13 +3,14 @@ package posthandler
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	authservice "github.com/wafi04/chatting-app/services/auth/pkg/service"
-	postservice "github.com/wafi04/chatting-app/services/post/pkg/service"
+	postservice "github.com/wafi04/chatting-app/services/post/service"
 	"github.com/wafi04/chatting-app/services/shared/middleware"
 	"github.com/wafi04/chatting-app/services/shared/pkg/response"
 	"github.com/wafi04/chatting-app/services/shared/types"
@@ -18,13 +19,6 @@ import (
 type PostHandler struct {
 	postclient *postservice.PostService
 	auhClient  *authservice.AuthService
-}
-
-type PostWithUser struct {
-	*types.Post
-	User         *types.GetUserResponse `json:"user"`
-	LikeCount    int32                  `json:"like_count"`
-	CommentCount int32                  `json:"comment_count"`
 }
 
 func NewGateway(postService *postservice.PostService, authservice *authservice.AuthService) *PostHandler {
@@ -59,6 +53,8 @@ func (h *PostHandler) HandleCreatePost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid JSON data: %v", err)})
 		return
 	}
+
+	log.Printf("url : %s ", reqData.Image)
 	// Prepare the gRPC request
 	if reqData.Caption == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Caption is required"})
@@ -114,36 +110,10 @@ func (h *PostHandler) HandleGetPostByUser(c *gin.Context) {
 		return
 	}
 
-	// Get user info
-	userInfo, err := h.auhClient.GetUser(c, &types.GetUserRequest{
-		UserId: user.UserId,
-	})
-	if err != nil {
-		response.SendErrorResponseWithDetails(c, http.StatusBadRequest, "Failed to get user info", err.Error())
-		return
-	}
-
-	// Combine posts with user info
-	postsWithUser := make([]*PostWithUser, len(postsData.Posts))
-	for i, post := range postsData.Posts {
-
-		if err != nil {
-			return
-		}
-		postsWithUser[i] = &PostWithUser{
-			Post:         post,
-			User:         userInfo,
-			LikeCount:    0,
-			CommentCount: 0,
-		}
-	}
-
-	response.SendSuccessResponse(c, http.StatusOK, "Fetch Data Successfully", gin.H{
-		"posts": postsWithUser,
-	})
+	response.SendSuccessResponse(c, http.StatusOK, "Fetch Data Successfully", postsData)
 }
 func (h *PostHandler) HandleGetAllPosts(c *gin.Context) {
-	user, err := middleware.GetUserFromGinContext(c)
+	_, err := middleware.GetUserFromGinContext(c)
 	if err != nil {
 		response.SendErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
@@ -161,25 +131,23 @@ func (h *PostHandler) HandleGetAllPosts(c *gin.Context) {
 		return
 	}
 
-	// Get user info
-	userInfo, err := h.auhClient.GetUser(c, &types.GetUserRequest{
-		UserId: user.UserId,
+	response.SendSuccessResponse(c, http.StatusOK, "Fetch Data Successfully", postsData)
+}
+func (h *PostHandler) HandleDeletePosts(c *gin.Context) {
+	postID := c.Param("postID")
+	// Get posts
+
+	if postID == "" {
+		response.SendErrorResponse(c, http.StatusBadRequest, "PostsID is required")
+		return
+	}
+	_, err := h.postclient.DeletePosts(c, &types.DeletePostRequest{
+		PostId: postID,
 	})
 	if err != nil {
-		response.SendErrorResponseWithDetails(c, http.StatusBadRequest, "Failed to get user info", err.Error())
+		response.SendErrorResponseWithDetails(c, http.StatusBadRequest, "Failed to get posts", err.Error())
 		return
 	}
 
-	// Combine posts with user info
-	postsWithUser := make([]*PostWithUser, len(postsData.Posts))
-	for i, post := range postsData.Posts {
-		postsWithUser[i] = &PostWithUser{
-			Post: post,
-			User: userInfo,
-		}
-	}
-
-	response.SendSuccessResponse(c, http.StatusOK, "Fetch Data Successfully", gin.H{
-		"posts": postsWithUser,
-	})
+	response.SendSuccessResponse(c, http.StatusOK, "Fetch Data Successfully", nil)
 }

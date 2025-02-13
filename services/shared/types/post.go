@@ -3,6 +3,7 @@ package types
 type Post struct {
 	Id           string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId       string   `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserInfo     UserInfo `json:"userInfo"`
 	Caption      string   `protobuf:"bytes,3,opt,name=caption,proto3" json:"caption,omitempty"`
 	CreatedAt    int64    `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt    int64    `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -11,7 +12,7 @@ type Post struct {
 	Media        []*Media `protobuf:"bytes,8,rep,name=media,proto3" json:"media,omitempty"`
 	Location     string   `protobuf:"bytes,9,opt,name=location,proto3" json:"location,omitempty"`
 	LikeCount    int32    `protobuf:"varint,10,opt,name=like_count,json=likeCount,proto3" json:"like_count,omitempty"`
-	CommentCount int32    `protobuf:"varint,11,opt,name=comment_count,json=commentCount,proto3" json:"comment_count,omitempty"`
+	CommentCount int64    `protobuf:"varint,11,opt,name=comment_count,json=commentCount,proto3" json:"comment_count,omitempty"`
 }
 
 type Media struct {

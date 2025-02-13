@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 type User struct {
 	UserId          string   `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name            string   `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -12,6 +14,20 @@ type User struct {
 	LastLoginAt     int64    `protobuf:"varint,9,opt,name=last_login_at,json=lastLoginAt,proto3" json:"last_login_at,omitempty"`
 	ActiveSessions  []string `protobuf:"bytes,10,rep,name=active_sessions,json=activeSessions,proto3" json:"active_sessions,omitempty"`
 	Picture         string   `protobuf:"bytes,11,opt,name=picture,proto3" json:"picture,omitempty"`
+}
+type UserProfile struct {
+	UserID      string     `db:"user_id" json:"userId"`
+	Username    *string    `db:"username" json:"username"`
+	PlaceBirth  *string    `db:"place_birth" json:"placeBirth"`
+	DateBirth   *time.Time `db:"date_birth" json:"dateBirth"`
+	Bio         *string    `db:"bio"  json:"bio"`
+	IsPrivacy   bool       `db:"is_privacy" json:"isPrivacy"`
+	PhoneNumber *string    `db:"phone_number" json:"phoneNumber"`
+	Gender      *string    `db:"gender" json:"gender"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAT"`
+
+	// Optional relationship
+	User *User `db:"user,omitempty"`
 }
 
 type RequestPasswordResetRequest struct {

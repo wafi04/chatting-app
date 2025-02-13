@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	cloudrepo "github.com/wafi04/chatting-app/services/post/pkg/repository/cloud"
-	postrepo "github.com/wafi04/chatting-app/services/post/pkg/repository/post"
+	cloudrepo "github.com/wafi04/chatting-app/services/post/repository/cloud"
+	postrepo "github.com/wafi04/chatting-app/services/post/repository/post"
 	"github.com/wafi04/chatting-app/services/shared/pkg/logger"
 	"github.com/wafi04/chatting-app/services/shared/types"
 )
@@ -72,9 +72,15 @@ func (s *PostService) rollbackMediaUploads(ctx context.Context, media []*types.M
 }
 
 func (s *PostService) GetUserPosts(ctx context.Context, req *types.GetUserPostsRequest) (*types.GetUserPostsResponse, error) {
+
 	return s.postrepo.GetUserPosts(ctx, req)
 }
 
 func (s *PostService) GetAllPosts(ctx context.Context, req *types.GetAllPostsRequest) (*types.GetAllPostsResponse, error) {
+
 	return s.postrepo.GetAllPosts(ctx, req)
+}
+func (s *PostService) DeletePosts(ctx context.Context, req *types.DeletePostRequest) (*types.DeletePostResponse, error) {
+
+	return s.postrepo.DeletePosts(ctx, req)
 }
