@@ -3,7 +3,6 @@ package gateway
 import (
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/wafi04/chatting-app/config"
 	"github.com/wafi04/chatting-app/config/database"
 	authhandler "github.com/wafi04/chatting-app/services/auth/pkg/handler"
 	authrepository "github.com/wafi04/chatting-app/services/auth/pkg/repository"
@@ -20,12 +19,9 @@ import (
 
 func SetUpRoutes(db *database.Database, mongoClient *mongo.Client, cld *cloudinary.Cloudinary) *gin.Engine {
 	r := gin.Default()
-	config.SetUpCors(r)
 	middleware.ResponseTime(r)
 	CheckCoon(r)
-
-	// Cloudinary setup
-
+	middleware.SetUpCors(r)
 	// Auth dependencies
 	authRepo := authrepository.NewUserRepository(db.DB)
 	authService := authservice.NewAuthService(authRepo)

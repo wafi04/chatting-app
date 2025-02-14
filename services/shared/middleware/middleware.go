@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -86,34 +85,23 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Step 1: Cek cookie untuk access_token
 		accessToken, err := c.Cookie("access_token")
 		if err == nil && accessToken != "" {
-			// Masukkan token dari cookie ke header Authorization
-			c.Request.Header.Set("Authorization", "Bearer "+accessToken)
-		}
-
-		// Step 2: Cek Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader != "" {
-			parts := strings.Split(authHeader, "Bearer ")
-			if len(parts) == 2 {
-				tokenString := strings.TrimSpace(parts[1])
-				if tokenString != "" {
-					// Validasi token dari header
-					if claims, err := ValidateToken(tokenString); err == nil {
-						user := &types.UserInfo{
-							UserId:          claims.UserID,
-							Email:           claims.Email,
-							Name:            claims.Name,
-							IsEmailVerified: claims.IsEmailVerified,
-						}
-						c.Set(string(UserContextKey), user)
-						c.Next()
-						return
-					}
+			// Validasi token dari cookie
+			if claims, err := ValidateToken(accessToken); err == nil {
+				user := &types.UserInfo{
+					UserId:          claims.UserID,
+					Email:           claims.Email,
+					Name:            claims.Name,
+					IsEmailVerified: claims.IsEmailVerified,
 				}
+				fmt.Printf("token : %s", err)
+				// Set user di context
+				c.Set(string(UserContextKey), user)
+				c.Next()
+				return
 			}
 		}
 
-		// Step 3: Jika tidak ada access_token di header atau cookie, cek refresh_token dari cookie
+		// Step 2: Jika tidak ada access_token valid, cek refresh_token dari cookie
 		refreshToken, err := c.Cookie("refresh_token")
 		if err == nil && refreshToken != "" {
 			// Validasi refresh token
@@ -124,27 +112,24 @@ func AuthMiddleware() gin.HandlerFunc {
 					Name:            claims.Name,
 					IsEmailVerified: claims.IsEmailVerified,
 				}
-
 				// Generate new access token
-				newAccessToken, err := GenerateToken(user, 24)
+				newAccessToken, err := GenerateToken(user, 24) // Token baru berlaku 24 jam
 				if err != nil {
 					c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 						"error": "Failed to generate new access token",
 					})
 					return
 				}
-
-				// Set new access token in the response header
+				// Set new access token sebagai cookie
 				SetAccressTokenCookie(c, newAccessToken)
-
-				// Set user in context
+				// Set user di context
 				c.Set(string(UserContextKey), user)
 				c.Next()
 				return
 			}
 		}
 
-		// Step 4: Jika tidak ada token valid, return unauthorized
+		// Step 3: Jika tidak ada token valid, return unauthorized
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"error": "No valid tokens found",
 		})
@@ -158,7 +143,7 @@ func SetRefreshTokenCookie(c *gin.Context, token string) {
 		token,
 		int(168*3600),
 		"/",
-		"192.168.100.6",
+		"192.168.100.9",
 		false,
 		true,
 	)
@@ -172,7 +157,7 @@ func SetAccressTokenCookie(c *gin.Context, token string) {
 		token,
 		int(24*3600),
 		"/",
-		"192.168.100.6",
+		"192.168.100.9",
 		false,
 		true,
 	)
@@ -185,7 +170,7 @@ func SetSessionCookie(c *gin.Context, sessionID string) {
 		sessionID,
 		int(168*3600),
 		"/",
-		"192.168.100.6",
+		"192.168.100.9",
 		false,
 		true,
 	)

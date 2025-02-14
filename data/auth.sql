@@ -13,7 +13,6 @@ CREATE TABLE public.users (
     PRIMARY KEY (user_id),
     CONSTRAINT users_email_key UNIQUE (email)
 );
-
 CREATE INDEX idx_users_email ON public.users USING btree (email);
 CREATE INDEX idx_users_name ON public.users USING btree (name);
 
